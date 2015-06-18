@@ -61,7 +61,7 @@ def fileInfo(filename = 'out_pounts.csv',directory = '/Users/justinmatis/Documen
                 yMax = max(yMax,y)
         return xMin,xMax,yMin,yMax
 
-def createTif(filename = 'out_pounts.csv',directory = '/Users/justinmatis/Documents/chalkcliffdata/'):
+def createTif(filename = 'out_pounts.csv',directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveFile='save.p'):
     xMin,xMax,yMin,yMax = fileInfo()
     data = np.zeros((xMax-xMin + 1,yMax-yMin + 1))
     with open(directory+filename , 'r') as infile:
@@ -69,10 +69,24 @@ def createTif(filename = 'out_pounts.csv',directory = '/Users/justinmatis/Docume
                 x , y , z = [float(x) for x in line.split(',')]
                 data[x-xMin,y-yMin] = z
 
-    pickle.dump( data, open( directory+"save.p", "wb" ) )
+    pickle.dump( data, open( directory+saveFile, "wb" ) )
 
 
-def createImage():
+def createImage(directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveFile='save.p',image='image.asc'):
+    data = pickle.load(open(directory+saveFile ,'r'))
+    NCOLS  = str(data.shape[0])
+    NROWS =  str(data.shape[1])
+    f = open(directory + image,'w')
+    f.write('NCOLS ' + NCOLS + '\n')
+    f.write('NROWS ' + NROWS + '\n')
+    f.write('XLLCORNER 0\n') #No specific corner since map is vertical
+    f.write('YLLCORNER 0\n')
+    f.write('CELLSIZE 1\n')
+    f.write('NODATA_VALUE -9999\n')
+
+
+
+createImage()
 
 
 
