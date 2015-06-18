@@ -1,6 +1,7 @@
 import numpy as np
 from math import cos,sin,pi
-import pickle
+from osgeo import gdal
+import pickle, osr
 
 def rotatePoints():
     filename = 'points.txt'
@@ -72,17 +73,36 @@ def createTif(filename = 'out_pounts.csv',directory = '/Users/justinmatis/Docume
     pickle.dump( data, open( directory+saveFile, "wb" ) )
 
 
-def createImage(directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveFile='save.p',image='image.asc'):
+def createImage(directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveFile='save.p',image='image.tif'):
     data = pickle.load(open(directory+saveFile ,'r'))
-    NCOLS  = str(data.shape[0])
-    NROWS =  str(data.shape[1])
-    f = open(directory + image,'w')
-    f.write('NCOLS ' + NCOLS + '\n')
-    f.write('NROWS ' + NROWS + '\n')
-    f.write('XLLCORNER 0\n') #No specific corner since map is vertical
-    f.write('YLLCORNER 0\n')
-    f.write('CELLSIZE 1\n')
-    f.write('NODATA_VALUE -9999\n')
+    NCOLS  = data.shape[0]
+    NROWS =  data.shape[1]
+    # f = open(directory + image,'w')
+    # f.write('NCOLS ' + NCOLS + '\n')
+    # f.write('NROWS ' + NROWS + '\n')
+    # f.write('XLLCORNER 0\n') #No specific corner since map is vertical
+    # f.write('YLLCORNER -'+ NROWS+'\n')
+    # f.write('CELLSIZE 1\n')
+    # f.write('NODATA_VALUE 0\n')
+    # for i in range(int(NROWS)):
+    #     line = ' '.join([str(int(x)) for x in data[i]]) + '\n'
+    #     f.write(line)
+    format = "GTiff"
+    driver = gdal.GetDriverByName( format )
+    metadata = driver.GetMetadata()
+    dst_ds = driver.Create( directory + image, NROWS,NCOLS, 1, gdal.GDT_Byte )
+    #dst_ds.SetGeoTransform( [ 444720, 1, 0, 3751320, 0, 1 ] )
+    srs = osr.SpatialReference()
+    srs.SetUTM( 11, 1 )
+    srs.SetWellKnownGeogCS( 'NAD27' )
+    dst_ds.SetProjection( srs.ExportToWkt() )
+    dst_ds.GetRasterBand(1).WriteArray( data )
+
+
+
+
+
+
 
 
 
