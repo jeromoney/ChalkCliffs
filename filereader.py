@@ -1,5 +1,5 @@
 import numpy as np
-from math import cos,sin,pi
+from math import cos,sin,pi,sqrt
 from osgeo import gdal
 import pickle, osr
 
@@ -71,19 +71,47 @@ def createTif(filename = 'out_pounts.csv',directory = '/Users/justinmatis/Docume
                 data[x-xMin,y-yMin] = z
 
     pickle.dump( data, open( directory+saveFile, "wb" ) )
-    assert False
 
 
 
-def fillNoData(directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveFile='oldsave.p'):
+def noDataFill((x,y),data):
+
+    defaultFillSize = 3
+    xMax = data.shape[0]
+    yMax = data.shape[1]
+    average = 0.
+    distAverage = 0. #Used for tracking inverse distance weighted sum
+    flag = False #Used to check if search actually finds one cell with data
+    i = 1
+    while not (i > defaultFillSize and not flag):
+        xRange = range(-i,i+1)
+        yRange = range(-i,i+1)
+        for xDelta in xRange:
+            for yDelta in yRange:
+                if (abs(xDelta) > i-1 or abs(yDelta) > i-1):   #Checking point is out on outer ring
+                    if 0<=xDelta+x<=xMax and 0<=yDelta+y<=yMax: #Making sure point is within boundaries
+                        if data[xDelta+x,yDelta+y] <> 0:
+                            flag = True
+                            average += data[xDelta+x,yDelta+y] / sqrt(xDelta**2 + yDelta **2)
+                            distAverage += 1/sqrt(xDelta**2 + yDelta **2)
+        data[x,y] = average/distAverage
+        i += 1
+
+
+
+def loadData(directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveFile='save.p'):
     data = pickle.load(open(directory+saveFile ,'r'))
 
 
     zMax = 0
     zMin = 999999999
-     #Filling in nodata points with vertical extrapolation
+     #Filling in nodata points
     for x in range(data.shape[0]):
-        pass
+        for y in range(data.shape[1]):
+            if data[x,y] == 0:
+                fillNo = noDataFill((x,y),data)
+                print fillNo
+                data[x,y] = fillNo
 
     #Normalizing Data
     data = (data - zMin)/(zMax - zMin) * (2**32)
@@ -105,13 +133,8 @@ def createImage(data,directory = '/Users/justinmatis/Documents/chalkcliffdata/',
     dst_ds.SetProjection( srs.ExportToWkt() )
     dst_ds.GetRasterBand(1).WriteArray( data )
 
-
-
-
-
-
-
-data = fillNoData()
+createTif()
+data = loadData()
 createImage(data)
 
 
