@@ -83,35 +83,7 @@ def fillNoData(directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveFi
     zMin = 999999999
      #Filling in nodata points with vertical extrapolation
     for x in range(data.shape[0]):
-        topCellwData    = None
-        bottomCellwData = None
-        for y in range(data.shape[1]):
-            if data[x,y] != 0:
-                zMax = max(zMax,data[x,y])
-                zMin = min(zMin,data[x,y])
-                #When we find the first cell with data, we need to fill in all the above values
-                if topCellwData == None:
-                    data[x,:y] = data[x,y]
-
-
-                bottomCellwData = (y,data[x,y])
-
-
-                #The meat of the algorithm: linear extrapolation between two known points
-                if topCellwData is not None and data[x,max(y-1,0)] == 0: #Max function protects against out of range references
-
-                    linearFunction = lambda x: topCellwData[1] + \
-                                               (bottomCellwData[1] - topCellwData[1]) * (float(x)/float(bottomCellwData[0] - topCellwData[0]))
-                    linExtrap = map( linearFunction,range(bottomCellwData[0]-topCellwData[0]))
-                    data[x,topCellwData[0]:bottomCellwData[0]] = linExtrap
-
-
-
-                topCellwData = (y,data[x,y])
-
-        #We fill in the bottom nodata values with the last data point.
-        data[x,bottomCellwData[0]:] = bottomCellwData[1]
-
+        pass
 
     #Normalizing Data
     data = (data - zMin)/(zMax - zMin) * (2**32)
