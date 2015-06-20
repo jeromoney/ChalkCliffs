@@ -71,18 +71,24 @@ def createTif(filename = 'out_pounts.csv',directory = '/Users/justinmatis/Docume
                 data[x-xMin,y-yMin] = z
 
     pickle.dump( data, open( directory+saveFile, "wb" ) )
+    assert False
 
 
 
-def fillNoData(directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveFile='save.p'):
+def fillNoData(directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveFile='oldsave.p'):
     data = pickle.load(open(directory+saveFile ,'r'))
 
+
+    zMax = 0
+    zMin = 999999999
      #Filling in nodata points with vertical extrapolation
     for x in range(data.shape[0]):
         topCellwData    = None
         bottomCellwData = None
         for y in range(data.shape[1]):
             if data[x,y] != 0:
+                zMax = max(zMax,data[x,y])
+                zMin = min(zMin,data[x,y])
                 #When we find the first cell with data, we need to fill in all the above values
                 if topCellwData == None:
                     data[x,:y] = data[x,y]
@@ -92,7 +98,7 @@ def fillNoData(directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveFi
 
 
                 #The meat of the algorithm: linear extrapolation between two known points
-                if data[x,max(y-1,0)] == 0: #Max function protects against out of range references
+                if topCellwData is not None and data[x,max(y-1,0)] == 0: #Max function protects against out of range references
 
                     linearFunction = lambda x: topCellwData[1] + \
                                                (bottomCellwData[1] - topCellwData[1]) * (float(x)/float(bottomCellwData[0] - topCellwData[0]))
@@ -104,20 +110,23 @@ def fillNoData(directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveFi
                 topCellwData = (y,data[x,y])
 
         #We fill in the bottom nodata values with the last data point.
-        data[x,bottomCellwData[0]:] = data[x,bottomCellwData[0]]
+        data[x,bottomCellwData[0]:] = bottomCellwData[1]
+
+
+    #Normalizing Data
+    data = (data - zMin)/(zMax - zMin) * (2**32)
+    return data
 
 
 
-
-def createImage(directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveFile='save.p',image='image.tif'):
-    data = pickle.load(open(directory+saveFile ,'r'))
+def createImage(data,directory = '/Users/justinmatis/Documents/chalkcliffdata/',image='image.tif'):
     NCOLS  = data.shape[0]
     NROWS =  data.shape[1]
     format = "GTiff"
     driver = gdal.GetDriverByName( format )
     metadata = driver.GetMetadata()
-    dst_ds = driver.Create( directory + image, NROWS,NCOLS, 1, gdal.GDT_Byte )
-    #dst_ds.SetGeoTransform( [ 444720, 1, 0, 3751320, 0, 1 ] )
+    dst_ds = driver.Create( directory + image, NROWS,NCOLS, 1, gdal.GDT_Int32 )
+    dst_ds.SetGeoTransform( [ 444720, 1, 0, 3751320, 0, 1 ] )
     srs = osr.SpatialReference()
     srs.SetUTM( 11, 1 )
     srs.SetWellKnownGeogCS( 'NAD27' )
@@ -130,9 +139,8 @@ def createImage(directory = '/Users/justinmatis/Documents/chalkcliffdata/',saveF
 
 
 
-
-fillNoData()
-createImage()
+data = fillNoData()
+createImage(data)
 
 
 
